@@ -2,11 +2,12 @@ import sqlite3
 from contextlib import asynccontextmanager
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel, Field
 
 from database import get_connection, initialize_database
 from utils import normalize_text
+from auth import require_token
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -38,7 +39,10 @@ def home():
     return {"service": "Music Sync", "status": "running"}
 
 @app.post("/tracks", status_code=201)
-def submit_track(track: TrackSubmission):
+def submit_track(
+    track: TrackSubmission,
+    _: None = Depends(require_token),
+    ):
     title = track.title.strip()
     artist = track.artist.strip()
 
