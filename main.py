@@ -1,7 +1,4 @@
-
-import re
 import sqlite3
-import unicodedata
 from contextlib import asynccontextmanager
 from typing import Literal
 
@@ -9,36 +6,25 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from database import get_connection, initialize_database
-
+from utils import normalize_text
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     initialize_database()
     yield
 
-
 app = FastAPI(
     title="Music Sync",
     description="Personal music discovery and library API",
-    version="0.2.0",
+    version="0.2.1",
     lifespan=lifespan,
 )
-
 
 class TrackSubmission(BaseModel):
     title: str = Field(min_length=1, max_length=300)
     artist: str = Field(min_length=1, max_length=300)
     source: Literal["shazam", "spotify", "manual"]
     source_id: str | None = Field(default=None, max_length=300)
-
-
-def normalize_text(value: str) -> str:
-    """Normalize text for basic cross-source matching."""
-    value = unicodedata.normalize("NFKC", value)
-    value = value.casefold()
-    value = re.sub(r"[^\w\s]", " ", value)
-    return " ".join(value.split())
-
 
 def get_track(conn, track_id: int):
     row = conn.execute(
@@ -47,11 +33,9 @@ def get_track(conn, track_id: int):
     ).fetchone()
     return dict(row) if row else None
 
-
 @app.get("/")
 def home():
     return {"service": "Music Sync", "status": "running"}
-
 
 @app.post("/tracks", status_code=201)
 def submit_track(track: TrackSubmission):
@@ -87,7 +71,6 @@ def submit_track(track: TrackSubmission):
                 }
 
         # 2. Potential duplicate across different sources.
-        # Conservative matching: exact normalized artist + title.
         candidates = conn.execute(
             """
             SELECT * FROM tracks
@@ -131,7 +114,6 @@ def submit_track(track: TrackSubmission):
                 ),
             )
         except sqlite3.IntegrityError:
-            # Another request may have registered the same source ID.
             if track.source_id is not None:
                 existing = conn.execute(
                     """
@@ -159,7 +141,6 @@ def submit_track(track: TrackSubmission):
             "match_type": None,
             "track": saved,
         }
-
 
 @app.get("/tracks")
 def list_tracks():
