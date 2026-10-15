@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from database import get_connection, initialize_database
 from utils import normalize_text
 from auth import require_token
+from parsers import parse_shazam_share
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -22,10 +23,11 @@ app = FastAPI(
 )
 
 class TrackSubmission(BaseModel):
-    title: str = Field(min_length=1, max_length=300)
-    artist: str = Field(min_length=1, max_length=300)
+    title: str | None = Field(default=None, max_length=2000)
+    artist: str | None = Field(default=None, max_length=300)
     source: Literal["shazam", "spotify", "manual"]
     source_id: str | None = Field(default=None, max_length=300)
+    raw_share: str | None = Field(default=None, max_length=5000)
 
 def get_track(conn, track_id: int):
     row = conn.execute(
@@ -42,14 +44,23 @@ def home():
 def submit_track(
     track: TrackSubmission,
     _: None = Depends(require_token),
-    ):
-    title = track.title.strip()
-    artist = track.artist.strip()
+):
+    title = track.title.strip() if track.title else None
+    artist = track.artist.strip() if track.artist else None
+    source_id = track.source_id
+
+    # If this is a raw Shazam share, parse it server-side.
+    if track.source == "shazam" and track.raw_share:
+        parsed = parse_shazam_share(track.raw_share)
+        title = parsed.title
+        artist = parsed.artist or "Unknown Artist"
+        if parsed.source_id:
+            source_id = parsed.source_id
 
     if not title or not artist:
         raise HTTPException(
             status_code=422,
-            detail="Title and artist cannot be blank",
+            detail="Could not determine title and artist from the submission",
         )
 
     normalized_title = normalize_text(title)
@@ -104,9 +115,10 @@ def submit_track(
                     source,
                     source_id,
                     normalized_title,
-                    normalized_artist
+                    normalized_artist,
+                    raw_share
                 )
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     title,
@@ -115,6 +127,7 @@ def submit_track(
                     track.source_id,
                     normalized_title,
                     normalized_artist,
+                    track.raw_share,
                 ),
             )
         except sqlite3.IntegrityError:

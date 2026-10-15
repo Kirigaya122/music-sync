@@ -40,6 +40,8 @@ def initialize_database():
             conn.execute(
                 "ALTER TABLE tracks ADD COLUMN normalized_artist TEXT"
             )
+        if "raw_share" not in columns:
+            conn.execute("ALTER TABLE tracks ADD COLUMN raw_share TEXT")
 
         # Backfill normalized fields for records created before this migration
         rows = conn.execute("""
