@@ -74,13 +74,13 @@ class Worker:
             if candidates:
                 candidate = (source, candidates[0])
                 break
-
+        
         if candidate is None:
+            print(f"[worker] no candidates found for: {job['title']} - {job['artist']}")
             self._fail_attempt(conn, job, "no candidates found")
             return
 
         source, cand = candidate
-        # Use the DB job's artist, not the filename guess!
         dest_dir = self._build_dest_dir(job["artist"], cand.extra.get("album"))
         acquired = source.acquire(cand, dest_dir)
 

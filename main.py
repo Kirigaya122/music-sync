@@ -13,6 +13,8 @@ from worker import Worker
 from utils import normalize_text
 from auth import require_token
 from parsers import parse_shazam_share
+from sources.yt_dlp_source import YtDlpSource
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -23,9 +25,12 @@ async def lifespan(app: FastAPI):
     library.mkdir(parents=True, exist_ok=True)
 
     worker = Worker(
-        sources=[LocalInboxSource(inbox)],
+        sources=[
+            LocalInboxSource(inbox),
+            YtDlpSource()          # <-- Add the network source here
+        ],
         library_dir=library,
-        poll_interval=1,
+        poll_interval=10,
     )
     worker.start()
     app.state.worker = worker
