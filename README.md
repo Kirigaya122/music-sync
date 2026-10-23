@@ -1,6 +1,3 @@
----
-
-````markdown
 # 🎵 Music Sync Pipeline
 
 A self-hosted, automated music acquisition and organization system.
@@ -40,7 +37,6 @@ Discover a song using Shazam or Spotify, share it to your home server, and watch
 sudo apt update
 sudo apt install -y python3 python3-venv ffmpeg sqlite3
 ```
-````
 
 ### 2. Project Installation
 
@@ -108,7 +104,3 @@ This project is for **personal use only**.
 
 - The Spotify integration uses public web scraping to fetch metadata and does not bypass any DRM.
 - Downloading copyrighted material from YouTube via `yt-dlp` may violate YouTube's Terms of Service or local copyright laws. Please use this tool responsibly and respect the rights of artists.
-
-```
-
-```
