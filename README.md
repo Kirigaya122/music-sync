@@ -28,6 +28,7 @@ Discover a song using Shazam or Spotify, share it to your home server, and watch
 - **Download Engine:** `yt-dlp`, `ffmpeg`
 - **Metadata Parsing:** `mutagen`, regex, and web scraping
 - **Client:** Android + HTTP Shortcuts
+- **OS:** Ubuntu 26.04.1 LTS
 
 ## 🚀 Setup Instructions
 
@@ -41,7 +42,7 @@ sudo apt install -y python3 python3-venv ffmpeg sqlite3
 ### 2. Project Installation
 
 ```bash
-git clone https://github.com/yourusername/music-sync.git
+git clone https://github.com/kirigaya122/music-sync.git
 cd music-sync
 
 python3 -m venv .venv
@@ -94,9 +95,9 @@ _Find your server's local IP address using `hostname -I` (e.g., `192.168.1.185`)
 
 ## 📜 Utility Scripts
 
-- `python scan_inbox.py`: Scan `~/Music/inbox` for new files and queue them for processing.
-- `python reconcile_library.py`: Re-link existing files in the library folder to the database.
-- `python clean_library.py`: Reorganize existing files into the proper `Artist/Singles` structure.
+- `python -m scripts.scan_inbox`: Scan `~/Music/inbox` for new files and queue them for processing.
+- `python -m scripts.reconcile_library`: Re-link existing files in the library folder to the database.
+- `python -m scripts.clean_library`: Reorganize existing files into the proper `Artist/Singles` structure.
 
 ## ⚠️ Disclaimer
 
