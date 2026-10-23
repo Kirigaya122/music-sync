@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from database import get_connection, initialize_database, enqueue_job
 from utils import normalize_text
 from sources.local import _read_tags

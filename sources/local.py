@@ -84,7 +84,7 @@ def _read_tags(path: Path) -> list[dict]:
         })
         
         # Interpretation 2: Artist - Title (if both tags are missing)
-        if not title and not artist:
+        if not title or not artist:
             results.append({
                 "title": right,
                 "artist": left,

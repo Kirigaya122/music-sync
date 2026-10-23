@@ -80,7 +80,8 @@ class Worker:
             return
 
         source, cand = candidate
-        dest_dir = self._build_dest_dir(cand.artist, cand.extra.get("album"))
+        # Use the DB job's artist, not the filename guess!
+        dest_dir = self._build_dest_dir(job["artist"], cand.extra.get("album"))
         acquired = source.acquire(cand, dest_dir)
 
         if acquired is None:
