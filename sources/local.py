@@ -3,7 +3,6 @@ import re
 import shutil
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Optional
 
 from mutagen import File as MutagenFile
 

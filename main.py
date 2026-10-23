@@ -1,5 +1,4 @@
 import sqlite3
-import time
 from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import Literal
@@ -14,6 +13,7 @@ from utils import normalize_text
 from auth import require_token
 from parsers import parse_shazam_share
 from sources.yt_dlp_source import YtDlpSource
+from parsers import parse_shazam_share, parse_spotify_share
 
 
 @asynccontextmanager
@@ -72,14 +72,25 @@ def submit_track(
     title = track.title.strip() if track.title else None
     artist = track.artist.strip() if track.artist else None
     source_id = track.source_id
-
-    # If this is a raw Shazam share, parse it server-side.
-    if track.source == "shazam" and track.raw_share:
-        parsed = parse_shazam_share(track.raw_share)
-        title = parsed.title
-        artist = parsed.artist or "Unknown Artist"
-        if parsed.source_id:
-            source_id = parsed.source_id
+    
+    # If this is a raw share, check if it's Spotify or Shazam
+    if track.raw_share:
+        if "spotify.com" in track.raw_share:
+            parsed = parse_spotify_share(track.raw_share)
+            if parsed:
+                title = parsed.title
+                artist = parsed.artist
+                source_id = parsed.source_id
+                track.source = "spotify" # Override the source so it's stored correctly
+            else:
+                raise HTTPException(422, "Could not parse Spotify link")
+                
+        elif track.source == "shazam":
+            parsed = parse_shazam_share(track.raw_share)
+            title = parsed.title
+            artist = parsed.artist or "Unknown Artist"
+            if parsed.source_id:
+                source_id = parsed.source_id
 
     if not title or not artist:
         raise HTTPException(
