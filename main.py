@@ -1,11 +1,15 @@
 import sqlite3
+import time
+from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel, Field
 
-from database import get_connection, initialize_database
+from database import get_connection, initialize_database, enqueue_job
+from sources.local import LocalInboxSource
+from worker import Worker
 from utils import normalize_text
 from auth import require_token
 from parsers import parse_shazam_share
@@ -13,7 +17,22 @@ from parsers import parse_shazam_share
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     initialize_database()
+
+    inbox = Path.home() / "Music" / "inbox"
+    library = Path.home() / "Music" / "library"
+    library.mkdir(parents=True, exist_ok=True)
+
+    worker = Worker(
+        sources=[LocalInboxSource(inbox)],
+        library_dir=library,
+        poll_interval=10,
+    )
+    worker.start()
+    app.state.worker = worker
+
     yield
+
+    worker.stop()
 
 app = FastAPI(
     title="Music Sync",
@@ -68,13 +87,13 @@ def submit_track(
 
     with get_connection() as conn:
         # 1. Exact duplicate from the same source.
-        if track.source_id is not None:
+        if source_id is not None:
             existing = conn.execute(
                 """
                 SELECT * FROM tracks
                 WHERE source = ? AND source_id = ?
                 """,
-                (track.source, track.source_id),
+                (track.source, source_id),
             ).fetchone()
 
             if existing:
@@ -124,20 +143,20 @@ def submit_track(
                     title,
                     artist,
                     track.source,
-                    track.source_id,
+                    source_id,
                     normalized_title,
                     normalized_artist,
                     track.raw_share,
                 ),
             )
         except sqlite3.IntegrityError:
-            if track.source_id is not None:
+            if source_id is not None:
                 existing = conn.execute(
                     """
                     SELECT * FROM tracks
                     WHERE source = ? AND source_id = ?
                     """,
-                    (track.source, track.source_id),
+                    (track.source, source_id),
                 ).fetchone()
 
                 if existing:
@@ -151,11 +170,13 @@ def submit_track(
             raise
 
         saved = get_track(conn, cursor.lastrowid)
+        enqueue_job(conn, cursor.lastrowid)
 
         return {
             "message": "Track registered",
             "duplicate": False,
             "match_type": None,
+            "job_queued": True,
             "track": saved,
         }
 
@@ -170,3 +191,15 @@ def list_tracks():
             "count": len(rows),
             "tracks": [dict(row) for row in rows],
         }
+        
+@app.get("/jobs")
+def list_jobs():
+    with get_connection() as conn:
+        rows = conn.execute("""
+            SELECT j.*, t.title, t.artist, t.status AS track_status
+            FROM jobs j
+            JOIN tracks t ON t.id = j.track_id
+            ORDER BY j.id DESC
+            LIMIT 100
+        """).fetchall()
+        return {"count": len(rows), "jobs": [dict(r) for r in rows]}
