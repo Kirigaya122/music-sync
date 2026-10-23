@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Optional
 import yt_dlp
 
-from utils import normalize_text
 from .base import AudioSource, Candidate, AcquiredFile
 
 class YtDlpSource(AudioSource):

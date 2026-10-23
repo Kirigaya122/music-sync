@@ -1,5 +1,6 @@
 import threading
 import time
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -145,11 +146,24 @@ class Worker:
             "UPDATE jobs SET attempts = ?, last_error = ?, next_attempt_at = ?, updated_at = ? WHERE id = ?",
             (attempts, reason, next_at, now, job["id"]),
         )
-
+        
     def _build_dest_dir(self, artist: str, album: Optional[str]) -> Path:
-        safe_artist = self._safe(artist)
+        safe_artist = self._clean_artist(artist)
         safe_album = self._safe(album or "Singles")
         return self.library_dir / safe_artist / safe_album
+
+    def _clean_artist(self, artist: str) -> str:
+        if not artist:
+            return "Unknown Artist"
+        
+        # 1. Split on comma, '&', 'feat.', 'ft.' to get only the primary artist
+        primary = re.split(r',|&|\sfeat\.|\sft\.', artist, flags=re.IGNORECASE)[0].strip()
+        
+        # 2. Title case it so "MUNN" becomes "Munn" and "roman" becomes "Roman"
+        # (But preserve specific stylings like "G-Eazy" or "J. Cole" by only capitalizing words)
+        primary = primary.title()
+        
+        return self._safe(primary)
 
     @staticmethod
     def _safe(name: str) -> str:
