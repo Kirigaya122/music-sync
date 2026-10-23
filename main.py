@@ -25,7 +25,7 @@ async def lifespan(app: FastAPI):
     worker = Worker(
         sources=[LocalInboxSource(inbox)],
         library_dir=library,
-        poll_interval=10,
+        poll_interval=1,
     )
     worker.start()
     app.state.worker = worker
