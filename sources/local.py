@@ -14,17 +14,30 @@ MATCH_THRESHOLD = 0.85
 
 # Words to ignore when comparing titles
 NOISE_WORDS = {
-    "official", "lyric", "video", "audio", "music", "hd", "hq", 
-    "visualizer", "remastered", "remaster", "explicit", "clean"
+    "official", "lyric", "lyrics", "video", "audio", "music", "hd", "hq", 
+    "visualizer", "remastered", "remaster", "explicit", "clean",
+    "nightcore", "amv", "slowed", "reverb", "sped", "up", "tiktok"
 }
 
 def _clean_for_matching(text: str) -> str:
     """Remove common YouTube/filename noise from normalized text."""
     if not text:
         return ""
+    
+    # 1. Remove anything inside brackets (), [], {}
+    text = re.sub(r'[\(\[\{].*?[\)\]\}]', '', text)
+    
+    # 2. Remove bitrates like 128k, 256 kbps, 320kbps
+    text = re.sub(r'\b\d+\s*kbps\b', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'\b\d+k\b', '', text, flags=re.IGNORECASE)
+    
+    # 3. Remove noise words
     words = text.split()
-    cleaned = [w for w in words if w not in NOISE_WORDS]
-    return " ".join(cleaned)
+    cleaned = [w for w in words if w.lower() not in NOISE_WORDS]
+    
+    # 4. Remove weird trailing punctuation
+    result = " ".join(cleaned)
+    return result.strip(" -_.")
 
 def _read_tags(path: Path) -> list[dict]:
     """Read tags via mutagen. Returns a list of possible interpretations."""
