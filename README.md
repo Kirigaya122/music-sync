@@ -1,36 +1,36 @@
 # 🎵 Music Sync Pipeline
 
-A self-hosted, automated music acquisition and organization system.
+A self-hosted, automated music acquisition and organization ecosystem.
 
-Discover a song using Shazam or Spotify, share it to your home server, and watch as it automatically downloads the audio, verifies it, embeds metadata, and organizes it into a clean `Artist / Album` folder structure.
+Discover a song using Shazam or Spotify, share it to your home server, and watch as it automatically downloads the audio, embeds high-res metadata and album art, and organizes it into a clean `Artist / Album` folder structure.
 
 ## ✨ Features
 
 - **Multi-Source Discovery:** Share directly from Shazam or Spotify.
-- **Smart Parsing:** Extracts title, artist, and stable IDs directly from shared text or Spotify URLs (no API keys required).
+- **Smart Parsing:** Extracts title, artist, and stable IDs directly from shared text or Spotify URLs (no API keys required, uses public web scraping).
 - **Automated Downloading:** Uses `yt-dlp` and `ffmpeg` to fetch high-quality audio and convert it to MP3.
 - **Deduplication:** Prevents downloading the same song twice using source IDs and metadata normalization.
-- **Local Inbox Ingestion:** Drop manually downloaded files into an `inbox` folder, and the system will match them to your Shazam history and organize them.
+- **Local Inbox Ingestion:** Drop manually downloaded files into an `inbox` folder, and the system will match them to your Shazam history.
+- **Metadata & Artwork Fixing:** Scrapes the iTunes API to automatically fetch missing tags and 600x600 album art for your local files.
 - **Background Worker:** Processes downloads asynchronously with exponential backoff on failures.
-- **Automated Library Management:** Embeds ID3 tags and organizes files into `~/Music/library/Artist/Singles/`.
+- **Native Android App:** A custom Kotlin app with offline queueing, sync history, and a native share-target.
 
 ## 🏗️ Architecture
 
-1. **Android Phone:** Uses the `HTTP Shortcuts` app to POST shared text to the server over local Wi-Fi.
-2. **FastAPI Server:** Validates the request, parses metadata, and queues a background job.
-3. **Worker Thread:** Polls the database, searches for the track (via local inbox or YouTube), and downloads it.
-4. **SQLite Database:** Tracks submissions, job statuses, file hashes, and library paths.
+1. **Android Phone:** The custom Kotlin app (in `/android`) sends shared text to the server over local Wi-Fi.
+2. **FastAPI Server:** Validates the request, parses metadata, and queues a background job in the database.
+3. **Worker Thread:** Polls the SQLite database, searches for the track (via local inbox or `yt-dlp`), and downloads it.
+4. **Library Organization:** Files are moved to `~/Music/library/Artist/Singles/` and tagged via `mutagen`.
 
 ## 🛠️ Tech Stack
 
 - **Backend:** Python 3, FastAPI, Uvicorn
 - **Database:** SQLite
 - **Download Engine:** `yt-dlp`, `ffmpeg`
-- **Metadata Parsing:** `mutagen`, regex, and web scraping
-- **Client:** Android + HTTP Shortcuts
-- **OS:** Ubuntu 26.04.1 LTS
+- **Metadata Parsing:** `mutagen`, `requests`, web scraping
+- **Client:** Kotlin (Android), OkHttp
 
-## 🚀 Setup Instructions
+## 🚀 Server Setup
 
 ### 1. Prerequisites (Ubuntu Server)
 
@@ -48,7 +48,7 @@ cd music-sync
 python3 -m venv .venv
 source .venv/bin/activate
 
-pip install fastapi "uvicorn[standard]" mutagen yt-dlp
+pip install fastapi "uvicorn[standard]" mutagen yt-dlp requests
 ```
 
 ### 3. Generate API Token
@@ -76,28 +76,34 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 _Find your server's local IP address using `hostname -I` (e.g., `192.168.1.185`)._
 
-## 📱 Android Setup (HTTP Shortcuts)
+## 🛠️ Utility Scripts
 
-1. Install **HTTP Shortcuts** from the Google Play Store.
-2. Create a new shortcut:
-   - **Method:** POST
-   - **URL:** `http://<YOUR_SERVER_IP>:8000/tracks`
-   - **Headers:** `Authorization: Bearer <YOUR_TOKEN_FROM_TOKEN.TXT>`
-   - **Body (JSON):**
-     ```json
-     {
-       "source": "shazam",
-       "raw_share": "{{shared_text}}"
-     }
-     ```
-3. Go to **Global Variables**, create `shared_text`, and enable **"Allow Receiving Value from Share Dialog"**.
-4. Share a song from Shazam or Spotify to HTTP Shortcuts.
+The `scripts/` folder contains powerful tools to maintain your library:
 
-## 📜 Utility Scripts
+- `python -m scripts.scan_inbox` : Scan `~/Music/inbox` for new files and queue them.
+- `python -m scripts.reconcile_library` : Re-link existing files in the library folder to the database.
+- `python -m scripts.clean_library` : Reorganize files into the proper `Artist/Singles` structure and fix folder names.
+- `python -m scripts.fix_metadata` : Automatically fetch missing ID3 tags and album art from iTunes for your whole library.
+- `python -m scripts.cleanup_junk` : Move corrupted or untaggable files into a `~/Music/Needs_Review` folder.
 
-- `python -m scripts.scan_inbox`: Scan `~/Music/inbox` for new files and queue them for processing.
-- `python -m scripts.reconcile_library`: Re-link existing files in the library folder to the database.
-- `python -m scripts.clean_library`: Reorganize existing files into the proper `Artist/Singles` structure.
+## 📱 Android App Setup (Kotlin)
+
+The repository includes a custom Kotlin Android app in the `android/` directory. It acts as a native Share Target and a dashboard for managing your library.
+
+### Features
+
+- **Native Share Menu:** Share directly from Shazam or Spotify.
+- **Offline Queueing:** If the server is unreachable, the app saves the track locally and automatically syncs when you are back on Wi-Fi.
+- **Dashboard:** View sync history, manage pending offline items, and edit raw share text if the metadata parser needs a nudge.
+- **Silent Execution:** Sends the payload in the background and disappears instantly.
+
+### How to Build
+
+1. Open the `android/` folder in **Android Studio**.
+2. Update the IP address in `android/app/src/main/res/xml/network_security_config.xml` to match your server's local IP.
+3. Build and install the APK on your phone.
+4. Open the app, enter your Server URL (e.g., `http://192.168.1.185:8000`) and your Bearer Token.
+5. Share a song from Shazam or Spotify!
 
 ## ⚠️ Disclaimer
 

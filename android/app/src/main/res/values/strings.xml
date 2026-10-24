@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">MusicSync</string>
+    <string name="server_url">Server URL</string>
+    <string name="server_url_hint">http://192.168.1.185:8000</string>
+    <string name="token">Token</string>
+    <string name="token_hint">bearer token</string>
+    <string name="save">Save</string>
+    <string name="music_sync">🎵 Music Sync</string>
+    <string name="queue_0_pending">Queue: 0 pending</string>
+    <string name="manage_offline_queue">Manage Offline Queue</string>
+    <string name="view_sync_history">View Sync History</string>
+    <string name="settings">Settings</string>
+    <string name="force_sync_queue_now">Force Sync Queue Now</string>
+</resources>

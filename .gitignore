@@ -2,3 +2,8 @@ token.txt
 music.db
 __pycache__
 .music-sync
+.venv/
+*.pyc
+.DS_Store
+android/.gradle/
+android/local.properties
